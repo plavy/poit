@@ -24,7 +24,15 @@
       var y2 = new Array();
       var trace1;
       var trace2;
-      var layout;
+      var layout = {
+		        title: 'Data',
+		        xaxis: {
+		            title: 'x',
+		        },
+		        yaxis: {
+		            title: 'y',
+		        }
+		      };
       
       // Gauge
 			var gauge = new RadialGauge({
@@ -64,7 +72,88 @@
 	    });
 	    
 	    gauge.draw();
+	    
+	    
+	    // DB Plot
+	    document.getElementById("index-db").addEventListener('input', function(e) {
+
+	    $.ajax({
+        type: "GET",
+        url: "/db/" + e.target.value,
+        success:function(data) 
+        { 
+          console.log(data);
+          data = JSON.parse(data);
+          n = Object.keys(data).length;        
+          xl = [];
+          y1l = [];
+          y2l = [];
+          for (var i=0; i< n; i++){
+            xl.push(data[i].x);
+            y1l.push(data[i].y1);
+            y2l.push(data[i].y2);
+          }
+          let trace = [
+            {
+              x: xl,
+              y: y1l,
+              name: 'sin'
+            },
+            {
+              x: xl,
+              y: y2l,
+              name: 'cos'
+            }];
+          document.getElementById("error-db").style.display = 'none';
+          Plotly.newPlot($('#myDbPlot')[0], trace, layout);
+        },
+        error: function(XMLHttpRequest, textStatus, errorThrown) {
+          document.getElementById("error-db").style.display = 'block';
+        }
+      });
       
+      });
+      
+      // File Plot
+      document.getElementById("index-file").addEventListener('input', function(e) {
+
+	    $.ajax({
+        type: "GET",
+        url: "/file/" + e.target.value,
+        success:function(data) 
+        { 
+          console.log(data);
+          data = JSON.parse(data);
+          n = Object.keys(data).length;        
+          xl = [];
+          y1l = [];
+          y2l = [];
+          for (var i=0; i< n; i++){
+            xl.push(data[i].x);
+            y1l.push(data[i].y1);
+            y2l.push(data[i].y2);
+          }
+          let trace = [
+            {
+              x: xl,
+              y: y1l,
+              name: 'sin'
+            },
+            {
+              x: xl,
+              y: y2l,
+              name: 'cos'
+            }];
+          document.getElementById("error-file").style.display = 'none';
+          Plotly.newPlot($('#myFilePlot')[0], trace, layout);         
+        },
+        error: function(XMLHttpRequest, textStatus, errorThrown) {
+          document.getElementById("error-file").style.display = 'block';
+        }
+      });
+      
+      });
+
       namespace = '/test';
       var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + namespace);
 
@@ -89,15 +178,6 @@
 		          x: x,
 		          y: y2,
 		          name: 'cos'
-		      };
-		      layout = {
-		        title: 'Data',
-		        xaxis: {
-		            title: 'x',
-		        },
-		        yaxis: {
-		            title: 'y',
-		        }
 		      };
 		      console.log(trace1);
 		      var traces = new Array();
@@ -132,9 +212,11 @@
         <li><a href="#tabs-1">Control</a></li>
         <li><a href="#tabs-2">Plot</a></li>
         <li><a href="#tabs-3">Gauge</a></li>
+        <li><a href="#tabs-4">DB Plot</a></li>
+        <li><a href="#tabs-5">File Plot</a></li>
       </ul>
+      
       <div id="tabs-1">
-        
 				<h2>Send:</h2>
 				<form id="emit" method="POST" action='#'>
 					<input type="text" name="emit_value" id="emit_value" placeholder="Amplituda">
@@ -150,14 +232,29 @@
 					<input type="submit" value="Stop">
 				</form> 
 				<h2>Receive:</h2>
-				<div id="log"></div>
-				
+				<div id="log"></div>	
       </div>
+      
       <div id="tabs-2">
   			<div id="myPlot" style="width:100%;max-width:700px;height:100%"></div>
       </div>
+      
       <div id="tabs-3">
   			<canvas id="myGauge"></canvas>
+      </div>
+      
+      <div id="tabs-4">
+      	<label for="index-db">Data index:</label>
+      	<input type="text" id="index-db"/>
+      	<p id="error-db" style="color: red; display: none;" >ERROR: Index does not exist in the database.</p>
+  			<div id="myDbPlot" style="width:100%;max-width:700px;height:100%"></div>
+      </div>
+      
+      <div id="tabs-5">
+      	<label for="index-file">Data index:</label>
+      	<input type="text" id="index-file"/>
+      	<p id="error-file" style="color: red; display: none;" >ERROR: Index does not exist in the file.</p>
+  			<div id="myFilePlot" style="width:100%;max-width:700px;height:100%"></div>
       </div>
     </div>
   

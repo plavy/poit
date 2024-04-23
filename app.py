@@ -6,13 +6,19 @@ import math
 import time
 import configparser as ConfigParser
 import random
+import re
+import serial
+
+## serial communication
+ser = serial.Serial("/dev/ttyACM0", 9600)
+ser.baudrate = 9600
 
 async_mode = None
 
 app = Flask(__name__)
 
 ## drop table poit.graph;
-## create table poit.graph ( id varchar(10), hodnoty varchar(16000) );
+## create table poit.graph ( id int, hodnoty varchar(16000) );
 
 config = ConfigParser.ConfigParser()
 config.read('config.cfg')
@@ -35,7 +41,7 @@ def background_thread(args):
     dataList = []
     db = MySQLdb.connect(host=myhost,user=myuser,passwd=mypasswd,db=mydb)          
     while True:
-        socketio.sleep(1)
+        socketio.sleep(0.1)
         if not run:
           if len(dataList)>0:
             print('Data list:')
@@ -44,36 +50,47 @@ def background_thread(args):
             cursor = db.cursor()
             cursor.execute("SELECT MAX(id) FROM graph")
             maxid = cursor.fetchone()[0]
+            print(f"MAXID is {maxid}")
             if maxid is None:
               maxid = 0
             cursor.execute("INSERT INTO graph (id, hodnoty) VALUES (%s, %s)", (int(maxid) + 1, fuj))
             db.commit()
             print(f"Data list stored to the database with index {int(maxid) + 1}.")
+            socketio.emit('my_response',
+                        {'data': f"DB index at {int(maxid) + 1}", 'count': count},
+                        namespace='/test')
             with open(dataFile, "a+") as f:
             	f.write(f"{fuj}\n")
             	print(f"Data list stored to the file.")
             dataList = []
           continue
-        if args:
-          A = dict(args).get('A')
-          print(f"A: {A}, run: {run}")
-        else:
-          A = 1
-        count += 1
-        t = time.time()
-        x = count*0.1
-        y1 = float(A)*math.sin(x)
-        y2 = float(A)*math.cos(x)
-        dataDict = {
-          "t": t,
-          "x": x,
-          "y1": y1,
-          "y2": y2}
-        dataList.append(dataDict)
-        if len(dataList)>0:
-          socketio.emit('my_response',
-                      {'data': y1, 'count': count, 'x': x, 'y1': y1, 'y2': y2},
-                      namespace='/test')
+        ser_line = ser.readline()
+        numbers = re.findall(r'\d+', str(ser_line))
+        if len(numbers) > 0:
+          light = numbers[0]
+          if args:
+            A = dict(args).get('A')
+          else:
+            A = 1
+          print(f"A: {A}, run: {run}, light: {light}")
+          count += 1
+          t = time.time()
+          x = count*0.1
+          y1 = float(A)*math.sin(x)
+          y2 = float(A)*math.cos(x)
+          dataDict = {
+            "count": count,
+            "t": t,
+            "x": x,
+            "y1": y1,
+            "y2": y2,
+            "light": light
+          }
+          dataList.append(dataDict)
+          if len(dataList)>0:
+            socketio.emit('my_response',
+                        {'data': light, 'count': count, 'x': x, 'y1': y1, 'y2': y2, 'light': light},
+                        namespace='/test')
 
 @app.route('/')
 def index():
@@ -88,7 +105,7 @@ def dbdata(num):
   db = MySQLdb.connect(host=myhost,user=myuser,passwd=mypasswd,db=mydb)
   cursor = db.cursor()
   print(num)
-  cursor.execute("SELECT hodnoty FROM  graph WHERE id=%s", num)
+  cursor.execute("SELECT hodnoty FROM  graph WHERE id=%s", (int(num),))
   rv = cursor.fetchone()
   return str(rv[0])
 

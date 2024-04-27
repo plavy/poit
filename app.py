@@ -5,7 +5,6 @@ import MySQLdb
 import math
 import time
 import configparser as ConfigParser
-import random
 import re
 import serial
 
@@ -60,8 +59,8 @@ def background_thread(args):
                         {'data': f"DB index at {int(maxid) + 1}", 'count': count},
                         namespace='/test')
             with open(dataFile, "a+") as f:
-            	f.write(f"{fuj}\n")
-            	print(f"Data list stored to the file.")
+              f.write(f"{fuj}\n")
+              print(f"Data list stored to the file.")
             dataList = []
           continue
         ser_line = ser.readline()
@@ -95,10 +94,6 @@ def background_thread(args):
 @app.route('/')
 def index():
     return render_template('index.html', async_mode=socketio.async_mode)
-
-@app.route('/graph', methods=['GET', 'POST'])
-def graph():
-    return render_template('graph.html', async_mode=socketio.async_mode)
 
 @app.route('/db/<string:num>')
 def dbdata(num):
